@@ -1,0 +1,7 @@
+@"
+.env
+labenv/
+__pycache__/
+*.pyc
+logs/
+"@ | Out-File -Encoding utf8 .gitignore
