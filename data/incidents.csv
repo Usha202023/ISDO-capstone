@@ -1,0 +1,16 @@
+number,short_description,description,category,priority,assignment_group,sla_due,state
+INC0001001,VPN not connecting after password change,User [REDACTED] reports VPN client fails to connect after AD password was reset. Error: authentication failed.,Network,P2,Network-Ops,2024-01-15 14:00:00,Open
+INC0001002,Cannot access ERP system - login error,Multiple users in Finance unable to login to SAP. Error code: DBCON_FAIL. Started 09:00 today.,Application,P1,App-Support,2024-01-15 11:00:00,Open
+INC0001003,Laptop running very slowly,User laptop taking 10+ minutes to boot. Running Windows 11. 8GB RAM. Started after last Windows update.,Hardware,P3,Desktop-Support,2024-01-17 09:00:00,Open
+INC0001004,Email not syncing on mobile device,Outlook mobile app not syncing emails for past 2 hours. iOS 17. Corporate email account.,Email,P3,Email-Support,2024-01-17 15:00:00,Open
+INC0001005,Printer offline in Finance dept,HP LaserJet Pro in Finance room B-204 showing offline. 15 users affected.,Hardware,P2,Desktop-Support,2024-01-16 12:00:00,Open
+INC0001006,Password reset request,User locked out of AD account after 5 failed attempts. Needs immediate reset to attend client call.,Access,P2,Service-Desk,2024-01-15 16:00:00,Open
+INC0001007,SharePoint site permissions error,Team unable to access project SharePoint site. Error: Access Denied. Site admin confirms correct group membership.,Access,P2,App-Support,2024-01-16 10:00:00,Open
+INC0001008,Network switch down - Building C,Network switch in Building C server room unresponsive. 40 users in Building C affected.,Network,P1,Network-Ops,2024-01-15 10:00:00,Open
+INC0001009,Software installation request - Zoom,User requests Zoom desktop client installation for upcoming client video calls.,Software,P4,Desktop-Support,2024-01-18 17:00:00,Open
+INC0001010,Exchange server high CPU alert,Monitoring alert: Exchange Server EXCH-01 CPU at 95% for past 30 minutes. Email delivery delays reported.,Server,P1,Server-Ops,2024-01-15 09:30:00,Open
+INC0001011,Wi-Fi dropping in conference rooms,Wi-Fi connectivity drops every 10-15 minutes in conference rooms 3A and 3B. Multiple users affected during meetings.,Network,P2,Network-Ops,2024-01-16 14:00:00,Open
+INC0001012,Blue screen error on workstation,User workstation showing BSOD with error SYSTEM_SERVICE_EXCEPTION. Happens 2-3 times per day.,Hardware,P2,Desktop-Support,2024-01-16 16:00:00,Open
+INC0001013,MFA not working - cannot login,Multi-factor authentication app not generating codes. User cannot login to any corporate systems.,Access,P1,Security-Ops,2024-01-15 13:00:00,Open
+INC0001014,Database backup job failed,Nightly backup job for Oracle DB failed at 02:00. No backup created. DBA team alerted.,Server,P2,DBA-Team,2024-01-16 08:00:00,Open
+INC0001015,New employee onboarding - account setup,"New joiner starting Monday needs: AD account, email, VPN access, laptop provisioned.",Access,P3,Service-Desk,2024-01-19 09:00:00,Open

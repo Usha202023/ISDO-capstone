@@ -1,0 +1,11 @@
+key,summary,request_type,priority,assignee,sla,status
+REQ-1001,Install Adobe Acrobat Pro on workstation WS-2234,Software Install,Medium,desktop-team,2024-01-17 17:00:00,Open
+REQ-1002,VPN access for new contractor joining project Phoenix,Access Grant,High,network-team,2024-01-15 12:00:00,Open
+REQ-1003,Increase mailbox quota for Marketing director,Email Config,Medium,email-team,2024-01-18 17:00:00,Open
+REQ-1004,Create shared folder on file server for HR project,Storage,Medium,server-team,2024-01-17 12:00:00,Open
+REQ-1005,Provision laptop for new Senior Developer hire,Hardware,High,desktop-team,2024-01-16 09:00:00,Open
+REQ-1006,Grant read access to Finance reports SharePoint library,Access Grant,High,app-team,2024-01-15 15:00:00,Open
+REQ-1007,Setup Zoom Rooms for Board Room on floor 5,AV Setup,Medium,desktop-team,2024-01-19 17:00:00,Open
+REQ-1008,Reset service account password for batch job SVCACC-RPT,Access,Critical,security-team,2024-01-15 11:00:00,Open
+REQ-1009,Install Python 3.11 and VS Code on developer workstations x5,Software Install,Low,desktop-team,2024-01-20 17:00:00,Open
+REQ-1010,Mobile device management enrolment for 10 new phones,Mobile,Medium,desktop-team,2024-01-18 17:00:00,Open
