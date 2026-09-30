@@ -1,5 +1,5 @@
 """
-ISDO Lab C6/C7 - LangGraph Orchestrator with an extended HITL gate
+ISDO Lab C6/C7/C8 - LangGraph Orchestrator with an extended HITL gate and A2A
 Wires the Triage, Resolution, SLA, HITL and Communication agents (Labs C3-C5)
 into a single StateGraph.
 
@@ -18,7 +18,22 @@ determine_hitl() is the single source of truth for these three checks, used
 by both sla_node (to decide whether to route through hitl) and
 communication_node (to decide which message to draft).
 
+Lab C8: when resolution_node gets LOW confidence from ChromaDB, it calls the
+A2A Knowledge Specialist (a2a/knowledge_specialist.py, run separately with
+`uvicorn knowledge_specialist:app --port 8001`) for a deeper look before
+falling through to the LOW_CONFIDENCE HITL trigger. If the specialist raises
+confidence above LOW, that trigger no longer fires for this ticket - but
+auto_resolve is NOT retroactively set: it stays whatever the Resolution
+Agent's own ChromaDB-based guardrail already decided, since A2A confidence
+hasn't gone through that guardrail's priority rules. If the A2A server isn't
+running, the code catches the connection error and falls back to the
+original ChromaDB result untouched, so LOW confidence and its HITL gate
+still apply exactly as in Lab C7.
+
 Run from the project root:  python orchestrator/supervisor.py
+Before running: start the A2A server in a separate terminal --
+    uvicorn a2a.knowledge_specialist:app --port 8001
+(the orchestrator still works without it - it just won't get the A2A upgrade)
 """
 
 import operator
@@ -27,6 +42,7 @@ import sys
 from datetime import datetime, timezone
 from typing import Annotated, List, Optional, TypedDict
 
+import requests
 from langgraph.graph import END, START, StateGraph
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -35,6 +51,9 @@ sys.path.insert(0, os.path.join(ROOT, "agents"))
 import resolution_agent   # noqa: E402  (path set above)
 import sla_agent          # noqa: E402
 import triage_agent       # noqa: E402
+
+A2A_BASE_URL = os.environ.get("A2A_KNOWLEDGE_SPECIALIST_URL", "http://localhost:8001")
+A2A_TIMEOUT_SECONDS = 15   # the specialist makes its own LLM call, so give it real time
 
 # -- Shared state ---------------------------------------------------------------
 
@@ -93,6 +112,41 @@ def determine_hitl(state: dict):
 
     return False, None, None
 
+
+def call_a2a_specialist(ticket_number: str, query: str, context: str = ""):
+    """POST /tasks then GET /tasks/{task_id} against the A2A Knowledge Specialist.
+    Returns the result dict on success, or None if the server can't be reached
+    or returns anything unexpected - callers should treat None as 'keep the
+    original ChromaDB result and carry on', not as a fatal error.
+
+    Note: requests.exceptions.ConnectionError (what's actually raised when the
+    server isn't running) is a subclass of the builtin ConnectionError, but it's
+    caught explicitly here rather than relying on that fact, since a Timeout is
+    just as likely on a slow LLM call and isn't a ConnectionError at all."""
+    try:
+        post_resp = requests.post(
+            f"{A2A_BASE_URL}/tasks",
+            json={"query": query, "ticket_number": ticket_number, "context": context},
+            timeout=A2A_TIMEOUT_SECONDS,
+        )
+        post_resp.raise_for_status()
+        task_id = post_resp.json()["task_id"]
+
+        get_resp = requests.get(f"{A2A_BASE_URL}/tasks/{task_id}", timeout=A2A_TIMEOUT_SECONDS)
+        get_resp.raise_for_status()
+        return get_resp.json()["result"]
+
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as exc:
+        print(f"  ! A2A Knowledge Specialist unreachable ({exc.__class__.__name__}) "
+              f"- is `uvicorn a2a.knowledge_specialist:app --port 8001` running?")
+        return None
+    except requests.exceptions.RequestException as exc:
+        print(f"  ! A2A call failed: {exc}")
+        return None
+    except (KeyError, ValueError) as exc:
+        print(f"  ! A2A response was malformed: {exc}")
+        return None
+
 # -- Nodes ------------------------------------------------------------------------
 
 def triage_node(state: TicketState) -> dict:
@@ -126,14 +180,37 @@ def resolution_node(state: TicketState) -> dict:
         state["triage_category"], state["triage_priority"],
     )
 
+    kb_article = result.get("kb_article_used", "None")
+    resolution_text = result.get("resolution_text", "")
+    confidence = result.get("confidence", "LOW")
+    auto_resolve = bool(result.get("auto_resolve"))   # not re-derived from A2A - see module docstring
+
+    audit_entries = log("ResolutionAgent", "search_kb",
+                         f"{kb_article} - {confidence} ({result.get('top_score', 0):.0%})")
+
+    if confidence == "LOW":
+        print("  -> ChromaDB confidence LOW - calling A2A Knowledge Specialist...")
+        a2a_context = f"category={state['triage_category']}, priority={state['triage_priority']}"
+        a2a_result = call_a2a_specialist(state["ticket_number"], state["short_description"], a2a_context)
+
+        if a2a_result:
+            confidence = a2a_result.get("confidence", confidence)
+            resolution_text = a2a_result.get("resolution", resolution_text)
+            kb_article = a2a_result.get("best_match", kb_article)
+            print(f"  -> A2A Knowledge Specialist: {confidence} "
+                  f"({a2a_result.get('confidence_score', 0):.0%}) via {kb_article}")
+            audit_entries += log("KnowledgeSpecialist", "a2a_task",
+                                  f"{kb_article} - {confidence} (ChromaDB was LOW)")
+        else:
+            audit_entries += log("KnowledgeSpecialist", "a2a_unavailable",
+                                  "A2A server unreachable - keeping ChromaDB LOW result")
+
     return {
-        "kb_article": result.get("kb_article_used", "None"),
-        "resolution_text": result.get("resolution_text", ""),
-        "auto_resolve": bool(result.get("auto_resolve")),
-        "confidence": result.get("confidence", "LOW"),
-        "audit_log": log("ResolutionAgent", "search_kb",
-                          f"{result.get('kb_article_used', 'None')} - {result.get('confidence')} "
-                          f"({result.get('top_score', 0):.0%})"),
+        "kb_article": kb_article,
+        "resolution_text": resolution_text,
+        "auto_resolve": auto_resolve,
+        "confidence": confidence,
+        "audit_log": audit_entries,
     }
 
 
